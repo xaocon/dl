@@ -1,0 +1,11 @@
+[package]
+authors = ["Evan Pitstick <emp@nerdx00@gmail.com>"]
+name = "dl"
+version = "0.0.1"
+
+[dependencies]
+clap = "2.26.2"
+futures = "0.1.16"
+hyper = "0.11.6"
+hyper-tls = "0.1.2"
+tokio-core = "0.1.10"
