@@ -1,15 +1,14 @@
 #![deny(warnings)]
 extern crate futures;
 extern crate hyper;
+extern crate hyper_tls;
 extern crate tokio_core;
 #[macro_use]
 extern crate clap;
 
-// use std::env;
 use std::io::{self, Write};
 use futures::Future;
 use futures::stream::Stream;
-use hyper::Client;
 use clap::{Arg, App};
 
 fn main() {
@@ -34,14 +33,16 @@ fn main() {
 		.get_matches();
 
 	let url = matches.value_of("URL").unwrap().parse::<hyper::Uri>().unwrap();
-	if url.scheme() != Some("http") {
+	if ! ( url.scheme() == Some("http") || url.scheme() == Some("https") ) {
 		println!("This example only works with 'http' URLs.");
 		return;
 	}
 
 	let mut core = tokio_core::reactor::Core::new().unwrap();
 	let handle = core.handle();
-	let client = Client::new(&handle);
+	let client = hyper::Client::configure()
+		.connector(hyper_tls::HttpsConnector::new(4, &handle).unwrap())
+		.build(&handle);
 
 	let work = client.get(url).and_then(|res| {
 		if matches.occurrences_of("v") > 0 {
