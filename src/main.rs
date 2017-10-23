@@ -5,57 +5,60 @@ extern crate tokio_core;
 #[macro_use]
 extern crate clap;
 
-use std::env;
+// use std::env;
 use std::io::{self, Write};
 use futures::Future;
 use futures::stream::Stream;
 use hyper::Client;
+use clap::{Arg, App};
 
 fn main() {
-    let matches = clap_app!(myapp =>
-        (version: crate_version!())
-        (author: "Evan Pitstick <emp@seclab.in>")
-        (about: "Does awesome things")
-        (@arg CONFIG: -c --config +takes_value "Sets a custom config file")
-        (@arg INPUT: +required "Sets the input file to use")
-        (@arg debug: -d ... "Sets the level of debugging information")
-        // (@subcommand test =>
-        //     (about: "controls testing features")
-        //     (version: "1.3")
-        //     (author: "Someone E. <someone_else@other.com>")
-        //     (@arg verbose: -v --verbose "Print test information verbosely")
-        // )
-    ).get_matches();
+	let matches = App::new(crate_name!())
+		.version(crate_version!())
+		.author(crate_authors!())
+		.about("A handy HTTP client")
+		.arg(Arg::with_name("config")
+			.short("c")
+			.long("config")
+			.value_name("FILE")
+			.help("Sets a custom config file")
+			.takes_value(true))
+		.arg(Arg::with_name("URL")
+			.help("The URL to reach")
+			.required(true)
+			.index(1))
+		.arg(Arg::with_name("v")
+			.short("v")
+			.multiple(true)
+			.help("Sets the level of verbosity"))
+		.get_matches();
 
-    println!("{}", crate_version!());
-    let url = match env::args().nth(1) {
-        Some(url) => url,
-        None => {
-            println!("Usage: client <url>");
-            return;
-        }
-    };
+	let url = matches.value_of("URL").unwrap().parse::<hyper::Uri>().unwrap();
+	if url.scheme() != Some("http") {
+		println!("This example only works with 'http' URLs.");
+		return;
+	}
 
-    let url = url.parse::<hyper::Uri>().unwrap();
-    if url.scheme() != Some("http") {
-        println!("This example only works with 'http' URLs.");
-        return;
-    }
+	let mut core = tokio_core::reactor::Core::new().unwrap();
+	let handle = core.handle();
+	let client = Client::new(&handle);
 
-    let mut core = tokio_core::reactor::Core::new().unwrap();
-    let handle = core.handle();
-    let client = Client::new(&handle);
+	let work = client.get(url).and_then(|res| {
+		if matches.occurrences_of("v") > 0 {
+			// 1.1 is hard coded for now
+			println!("> HTTP/1.1 {}", res.status());
+			// TODO: Should consider changing Display for hyper::Headers or using regex
+			println!("> {}", res.headers().to_string().replace("\n", "\n> "));
+		}
 
-    let work = client.get(url).and_then(|res| {
-        println!("Response: {}", res.status());
-        println!("Headers: \n{}", res.headers());
+		res.body().for_each(|chunk| {
+			io::stdout().write_all(&chunk).map_err(From::from)
+		})
+	}).map(|_| {
+		if matches.occurrences_of("v") > 0 {
+			println!("\n\nDone.");
+		}
+	});
 
-        res.body().for_each(|chunk| {
-            io::stdout().write_all(&chunk).map_err(From::from)
-        })
-    }).map(|_| {
-        println!("\n\nDone.");
-    });
-
-    core.run(work).unwrap();
+	core.run(work).unwrap();
 }
