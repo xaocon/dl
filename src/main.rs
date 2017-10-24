@@ -32,7 +32,11 @@ fn main() {
 			.help("Sets the level of verbosity"))
 		.get_matches();
 
-	let url = matches.value_of("URL").unwrap().parse::<hyper::Uri>().unwrap();
+	let mut url = matches.value_of("URL").unwrap().parse::<hyper::Uri>().unwrap();
+	// TODO: this is really sloppy, need a better way to make uri. should i assume https?
+	if url.scheme() == None {
+		url = ("https://".to_string() + matches.value_of("URL").unwrap()).parse::<hyper::Uri>().unwrap();
+	}
 	if ! ( url.scheme() == Some("http") || url.scheme() == Some("https") ) {
 		println!("This example only works with 'http' URLs.");
 		return;
@@ -46,7 +50,7 @@ fn main() {
 
 	let work = client.get(url).and_then(|res| {
 		if matches.occurrences_of("v") > 0 {
-			// 1.1 is hard coded for now
+			// TODO: 1.1 is hard coded for now
 			println!("> HTTP/1.1 {}", res.status());
 			// TODO: Should consider changing Display for hyper::Headers or using regex
 			println!("> {}", res.headers().to_string().replace("\n", "\n> "));
