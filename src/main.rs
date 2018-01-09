@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
@@ -6,10 +6,10 @@ extern crate tokio_core;
 #[macro_use]
 extern crate clap;
 
-use std::io::{self, Write};
-use futures::Future;
-use futures::stream::Stream;
 use clap::{Arg, App};
+use std::io::{self, Write};
+use futures::{Future, Stream};
+use tokio_core::reactor::Core;
 
 fn main() {
 	let matches = App::new(crate_name!())
@@ -36,7 +36,7 @@ fn main() {
 		return;
 	}
 
-	let mut core = tokio_core::reactor::Core::new().unwrap();
+	let mut core = Core::new().unwrap();
 	let handle = core.handle();
 	let client = hyper::Client::configure()
 		.connector(hyper_tls::HttpsConnector::new(4, &handle).unwrap())
