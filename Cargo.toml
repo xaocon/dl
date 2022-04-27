@@ -1,0 +1,17 @@
+[package]
+name = 'dl'
+version = '0.1.0'
+edition = '2021'
+
+[dependencies]
+log = '0.4.16'
+simple_logger = { version = "2.1.0", default-features = false, features = ["stderr"] }
+
+[dependencies.ureq]
+version = '2.4.0'
+features = [
+  'brotli',
+  'charset',
+  'native-certs',
+  'socks-proxy',
+]
